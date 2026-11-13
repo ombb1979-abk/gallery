@@ -18,11 +18,11 @@
     label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
     select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #323742; background: #12141a; color: var(--text); font-size: 15px; margin-bottom: 10px; }
     
-    .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; position: sticky; top: 0; background: var(--bg); z-index: 10; padding-top: 8px; }
-    .tab { background: var(--card); border: 1px solid #2e333d; color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer; white-space: nowrap; font-size: 14px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 8px; margin-bottom: 12px; position: sticky; top: 0; background: var(--bg); z-index: 10; padding-top: 8px; }
+    .tab { flex: 1 1 auto; text-align: center; background: var(--card); border: 1px solid #2e333d; color: var(--text); padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 13px; line-height: 1.2; }
     .tab.active { border-color: var(--accent); background: rgba(59, 130, 246, 0.15); }
     .tab.done { border-color: var(--ok); }
-    .badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 99px; font-size: 12px; background: #2a2e37; }
+    .badge { display: inline-block; margin-left: 4px; padding: 2px 6px; border-radius: 99px; font-size: 11px; background: #2a2e37; }
     .tab.done .badge { background: var(--ok); color: #000; font-weight: 700; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; }
