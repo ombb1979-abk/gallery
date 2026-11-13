@@ -77,10 +77,11 @@
     <img id="zoomImg" src="">
   </div>
 
-  <div class="modal" id="successModal">
+  <div class="modal" id="successModal" onclick="closeSuccessModal()">
     <div class="success-box">
       <h2 style="color:var(--ok); margin-bottom:10px;">Выбор принят!</h2>
-      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные сохранены для верстки выпускного альбома. Эту страницу можно закрыть.</p>
+      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные сохранены для верстки выпускного альбома.</p>
+      <p style="font-size:12px; color:#6b7280; margin-top:12px;">Окно закроется автоматически через 3 сек. (или коснитесь экрана)</p>
     </div>
   </div>
 
@@ -254,14 +255,39 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        document.getElementById('successModal').classList.add('open');
+        openSuccessModal();
       } catch (err) {
         alert('Ошибка сети при отправке. Проверьте интернет и попробуйте еще раз.');
         btn.disabled = false;
         btn.textContent = 'Подтвердить выбор';
       }
     };
+let successTimer = null;
 
+    function openSuccessModal() {
+      document.getElementById('successModal').classList.add('open');
+      clearTimeout(successTimer);
+      successTimer = setTimeout(closeSuccessModal, 3000);
+    }
+
+    function closeSuccessModal() {
+      clearTimeout(successTimer);
+      const modal = document.getElementById('successModal');
+      if (!modal.classList.contains('open')) return;
+      modal.classList.remove('open');
+
+      // Сбрасываем форму под следующего ученика
+      document.getElementById('studentSelect').value = '';
+      document.getElementById('editNameBox').style.display = 'none';
+      document.getElementById('editedName').value = '';
+      config.slots.forEach((s, idx) => {
+        selections[s.id] = [];
+        if (idx === 0) activeSlotId = s.id;
+      });
+      renderTabs();
+      renderGrid();
+      validate();
+    }
     init();
   </script>
 </body>
