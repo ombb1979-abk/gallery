@@ -80,8 +80,7 @@
   <div class="modal" id="successModal">
     <div class="success-box">
       <h2 style="color:var(--ok); margin-bottom:10px;">Выбор принят!</h2>
-      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные сохранены для верстки альбома. Теперь вы можете скачать все фотографии с фотосессии:</p>
-      <a id="downloadLink" class="btn-download" href="#" target="_blank">Скачать цифровую копию</a>
+      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные сохранены для верстки выпускного альбома. Эту страницу можно закрыть.</p>
     </div>
   </div>
 
@@ -110,7 +109,7 @@
 
       document.getElementById('title').textContent = config.title;
       document.getElementById('subtitle').textContent = config.subtitle;
-      document.getElementById('downloadLink').href = config.archiveUrl;
+      
 
       const select = document.getElementById('studentSelect');
       const editBox = document.getElementById('editNameBox');
@@ -228,7 +227,7 @@
       });
       const btn = document.getElementById('submitBtn');
       btn.disabled = !(name.length > 2 && slotsOk);
-      btn.textContent = btn.disabled ? 'Заполните ФИО и обязательные разделы' : 'Подтвердить выбор и скачать фото';
+      btn.textContent = btn.disabled ? 'Заполните ФИО и обязательные разделы' : 'Подтвердить выбор';
     }
 
     document.getElementById('submitBtn').onclick = async () => {
@@ -259,7 +258,7 @@
       } catch (err) {
         alert('Ошибка сети при отправке. Проверьте интернет и попробуйте еще раз.');
         btn.disabled = false;
-        btn.textContent = 'Подтвердить выбор и скачать фото';
+        btn.textContent = 'Подтвердить выбор';
       }
     };
 
