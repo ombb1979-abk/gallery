@@ -29,8 +29,8 @@
     .photo-card { position: relative; border-radius: 10px; overflow: hidden; border: 3px solid transparent; background: var(--card); cursor: pointer; aspect-ratio: 3/4; }
     .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .photo-card.selected { border-color: var(--ok); }
-    .photo-num { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
-    .zoom-btn { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); border: none; color: #fff; padding: 6px 9px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    .photo-num { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    .zoom-btn { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.75); border: none; color: #fff; padding: 6px 9px; border-radius: 6px; font-size: 13px; cursor: pointer; }
     .check-mark { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #000; display: none; align-items: center; justify-content: center; font-weight: bold; }
     .photo-card.selected .check-mark { display: flex; }
 
@@ -38,7 +38,6 @@
     .btn-submit { width: 100%; max-width: 900px; padding: 14px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
     .btn-submit:disabled { background: #2e333d; color: #6b7280; cursor: not-allowed; }
 
-    /* Модалка просмотра и финала */
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
     .modal.open { display: flex; }
     .modal img { max-width: 100%; max-height: 88vh; border-radius: 8px; }
@@ -55,9 +54,15 @@
     </header>
 
     <div class="panel">
-      <label>Выберите ученика из списка:</label>
-      <select id="studentSelect"><option value="">-- Выберите фамилию и имя --</option></select>
-      <input type="text" id="customName" placeholder="Или введите Фамилию Имя вручную (если нет в списке)" style="display:none;">
+      <label>1. Выберите ученика из списка:</label>
+      <select id="studentSelect">
+        <option value="">-- Выберите фамилию и имя --</option>
+      </select>
+
+      <div id="editNameBox" style="display:none; margin-top: 8px;">
+        <label for="editedName">2. Проверьте написание для альбома (можно исправить):</label>
+        <input type="text" id="editedName" placeholder="Фамилия Имя">
+      </div>
     </div>
 
     <div class="tabs" id="tabs"></div>
@@ -75,15 +80,14 @@
   <div class="modal" id="successModal">
     <div class="success-box">
       <h2 style="color:var(--ok); margin-bottom:10px;">Выбор принят!</h2>
-      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные переданы фотографу для верстки альбома. Теперь вы можете скачать все фотографии с фотосессии:</p>
+      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные сохранены для верстки альбома. Теперь вы можете скачать все фотографии с фотосессии:</p>
       <a id="downloadLink" class="btn-download" href="#" target="_blank">Скачать цифровую копию</a>
     </div>
   </div>
 
   <script>
-    // ВПИШИ СВОИ ДАННЫЕ TELEGRAM БОТА ДЛЯ ТЕСТА:
-    const BOT_TOKEN = "ВСТАВЬ_ТОКЕН_БОТА";
-    const CHAT_ID = "ВСТАВЬ_СВОЙ_CHAT_ID";
+    // ВСТАВЬ СЮДА ССЫЛКУ ИЗ GOOGLE APPS SCRIPT:
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZVC6JyVxDwm2hxqUundJD5mo29TRLdMTtl97OimSaGVhredXqo8tjaMO2aybC_Bw/exec";
 
     const urlParams = new URLSearchParams(window.location.search);
     const galleryId = urlParams.get('id') || 'demo';
@@ -91,17 +95,27 @@
 
     let config = null;
     let activeSlotId = null;
-    let selections = {}; // { slotId: ['001.jpg', ...] }
+    let selections = {};
 
     async function init() {
-      const res = await fetch(`${basePath}config.json`);
-      config = await res.json();
+      try {
+        const res = await fetch(`${basePath}config.json?t=${Date.now()}`);
+        if (!res.ok) throw new Error("Конфиг галереи не найден");
+        config = await res.json();
+      } catch (e) {
+        document.getElementById('title').textContent = "Галерея не найдена";
+        document.getElementById('subtitle').textContent = "Проверьте правильность ссылки или обновите страницу.";
+        return;
+      }
 
       document.getElementById('title').textContent = config.title;
       document.getElementById('subtitle').textContent = config.subtitle;
       document.getElementById('downloadLink').href = config.archiveUrl;
 
       const select = document.getElementById('studentSelect');
+      const editBox = document.getElementById('editNameBox');
+      const editedInput = document.getElementById('editedName');
+
       config.students.forEach(st => {
         const opt = document.createElement('option');
         opt.value = st; opt.textContent = st;
@@ -114,10 +128,21 @@
       }
 
       select.addEventListener('change', () => {
-        document.getElementById('customName').style.display = select.value === '__custom__' ? 'block' : 'none';
+        if (!select.value) {
+          editBox.style.display = 'none';
+          editedInput.value = '';
+        } else if (select.value === '__custom__') {
+          editBox.style.display = 'block';
+          editedInput.value = '';
+          editedInput.focus();
+        } else {
+          editBox.style.display = 'block';
+          editedInput.value = select.value;
+        }
         validate();
       });
-      document.getElementById('customName').addEventListener('input', validate);
+
+      editedInput.addEventListener('input', validate);
 
       config.slots.forEach((s, idx) => {
         selections[s.id] = [];
@@ -192,9 +217,7 @@
     }
 
     function getStudentName() {
-      const val = document.getElementById('studentSelect').value;
-      if (val === '__custom__') return document.getElementById('customName').value.trim();
-      return val;
+      return document.getElementById('editedName').value.trim();
     }
 
     function validate() {
@@ -209,26 +232,34 @@
     }
 
     document.getElementById('submitBtn').onclick = async () => {
-      const name = getStudentName();
-      let msg = `📸 *Новый выбор в виньетку*\n*Класс:* ${config.title}\n*Ученик:* ${name}\n\n`;
-      config.slots.forEach(s => {
-        const files = selections[s.id].length ? selections[s.id].join(', ') : 'не выбрано';
-        msg += `• *${s.name}:* ${files}\n`;
-      });
+      const originalSelected = document.getElementById('studentSelect').value;
+      const finalName = getStudentName();
+
+      const payload = {
+        classTitle: config.title,
+        finalName: finalName,
+        originalName: originalSelected === '__custom__' ? 'Добавлен вручную' : originalSelected,
+        portraits: (selections['portraits'] || []).join(', '),
+        group: (selections['group'] || []).join(', '),
+        free: (selections['free'] || []).join(', ')
+      };
 
       const btn = document.getElementById('submitBtn');
-      btn.disabled = true; btn.textContent = 'Отправка...';
+      btn.disabled = true;
+      btn.textContent = 'Сохранение выбора...';
 
       try {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        await fetch(GOOGLE_SCRIPT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown' })
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
         });
         document.getElementById('successModal').classList.add('open');
       } catch (err) {
-        alert('Ошибка сети при отправке. Проверьте интернет.');
+        alert('Ошибка сети при отправке. Проверьте интернет и попробуйте еще раз.');
         btn.disabled = false;
+        btn.textContent = 'Подтвердить выбор и скачать фото';
       }
     };
 
