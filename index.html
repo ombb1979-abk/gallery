@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusLab — Выбор фотографий</title>
+  <style>
+    :root { --bg: #0f1115; --card: #1a1d24; --accent: #3b82f6; --ok: #10b981; --text: #f3f4f6; --muted: #9ca3af; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 100px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    header { margin-bottom: 20px; border-bottom: 1px solid #2a2e37; padding-bottom: 14px; }
+    .brand { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); font-weight: 700; }
+    h1 { font-size: 22px; margin: 4px 0; }
+    .sub { font-size: 14px; color: var(--muted); }
+    
+    .panel { background: var(--card); padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #323742; background: #12141a; color: var(--text); font-size: 15px; margin-bottom: 10px; }
+    
+    .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; position: sticky; top: 0; background: var(--bg); z-index: 10; padding-top: 8px; }
+    .tab { background: var(--card); border: 1px solid #2e333d; color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer; white-space: nowrap; font-size: 14px; }
+    .tab.active { border-color: var(--accent); background: rgba(59, 130, 246, 0.15); }
+    .tab.done { border-color: var(--ok); }
+    .badge { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 99px; font-size: 12px; background: #2a2e37; }
+    .tab.done .badge { background: var(--ok); color: #000; font-weight: 700; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; }
+    .photo-card { position: relative; border-radius: 10px; overflow: hidden; border: 3px solid transparent; background: var(--card); cursor: pointer; aspect-ratio: 3/4; }
+    .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-card.selected { border-color: var(--ok); }
+    .photo-num { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    .zoom-btn { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); border: none; color: #fff; padding: 6px 9px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    .check-mark { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #000; display: none; align-items: center; justify-content: center; font-weight: bold; }
+    .photo-card.selected .check-mark { display: flex; }
+
+    .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid #2a2e37; padding: 12px 16px; display: flex; justify-content: center; z-index: 20; }
+    .btn-submit { width: 100%; max-width: 900px; padding: 14px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .btn-submit:disabled { background: #2e333d; color: #6b7280; cursor: not-allowed; }
+
+    /* Модалка просмотра и финала */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+    .modal.open { display: flex; }
+    .modal img { max-width: 100%; max-height: 88vh; border-radius: 8px; }
+    .success-box { background: var(--card); padding: 24px; border-radius: 14px; max-width: 440px; text-align: center; }
+    .btn-download { display: inline-block; margin-top: 16px; padding: 14px 22px; background: var(--ok); color: #000; font-weight: 700; text-decoration: none; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">FocusLab Studio</div>
+      <h1 id="title">Загрузка галереи...</h1>
+      <div class="sub" id="subtitle"></div>
+    </header>
+
+    <div class="panel">
+      <label>Выберите ученика из списка:</label>
+      <select id="studentSelect"><option value="">-- Выберите фамилию и имя --</option></select>
+      <input type="text" id="customName" placeholder="Или введите Фамилию Имя вручную (если нет в списке)" style="display:none;">
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="footer-bar">
+    <button class="btn-submit" id="submitBtn" disabled>Выберите ученика и нужные фото</button>
+  </div>
+
+  <div class="modal" id="zoomModal" onclick="this.classList.remove('open')">
+    <img id="zoomImg" src="">
+  </div>
+
+  <div class="modal" id="successModal">
+    <div class="success-box">
+      <h2 style="color:var(--ok); margin-bottom:10px;">Выбор принят!</h2>
+      <p style="font-size:14px; color:var(--muted);">Спасибо! Данные переданы фотографу для верстки альбома. Теперь вы можете скачать все фотографии с фотосессии:</p>
+      <a id="downloadLink" class="btn-download" href="#" target="_blank">Скачать цифровую копию</a>
+    </div>
+  </div>
+
+  <script>
+    // ВПИШИ СВОИ ДАННЫЕ TELEGRAM БОТА ДЛЯ ТЕСТА:
+    const BOT_TOKEN = "ВСТАВЬ_ТОКЕН_БОТА";
+    const CHAT_ID = "ВСТАВЬ_СВОЙ_CHAT_ID";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const galleryId = urlParams.get('id') || 'demo';
+    const basePath = `galleries/${galleryId}/`;
+
+    let config = null;
+    let activeSlotId = null;
+    let selections = {}; // { slotId: ['001.jpg', ...] }
+
+    async function init() {
+      const res = await fetch(`${basePath}config.json`);
+      config = await res.json();
+
+      document.getElementById('title').textContent = config.title;
+      document.getElementById('subtitle').textContent = config.subtitle;
+      document.getElementById('downloadLink').href = config.archiveUrl;
+
+      const select = document.getElementById('studentSelect');
+      config.students.forEach(st => {
+        const opt = document.createElement('option');
+        opt.value = st; opt.textContent = st;
+        select.appendChild(opt);
+      });
+      if (config.allowCustomName) {
+        const opt = document.createElement('option');
+        opt.value = "__custom__"; opt.textContent = "Другой ученик (ввести вручную)";
+        select.appendChild(opt);
+      }
+
+      select.addEventListener('change', () => {
+        document.getElementById('customName').style.display = select.value === '__custom__' ? 'block' : 'none';
+        validate();
+      });
+      document.getElementById('customName').addEventListener('input', validate);
+
+      config.slots.forEach((s, idx) => {
+        selections[s.id] = [];
+        if (idx === 0) activeSlotId = s.id;
+      });
+
+      renderTabs();
+      renderGrid();
+      validate();
+    }
+
+    function renderTabs() {
+      const tabsEl = document.getElementById('tabs');
+      tabsEl.innerHTML = '';
+      config.slots.forEach(s => {
+        const count = selections[s.id].length;
+        const isDone = count >= s.min && count <= s.max;
+        const btn = document.createElement('button');
+        btn.className = `tab ${s.id === activeSlotId ? 'active' : ''} ${isDone && s.min > 0 ? 'done' : ''}`;
+        btn.innerHTML = `${s.name} <span class="badge">${count}/${s.max}</span>`;
+        btn.onclick = () => { activeSlotId = s.id; renderTabs(); renderGrid(); };
+        tabsEl.appendChild(btn);
+      });
+    }
+
+    function renderGrid() {
+      const gridEl = document.getElementById('grid');
+      gridEl.innerHTML = '';
+      const currentSelected = selections[activeSlotId];
+
+      config.photos.forEach(file => {
+        const card = document.createElement('div');
+        const isSel = currentSelected.includes(file);
+        card.className = `photo-card ${isSel ? 'selected' : ''}`;
+        const label = file.replace(/\.[^/.]+$/, "");
+
+        card.innerHTML = `
+          <img src="${basePath}photos/${file}" loading="lazy">
+          <div class="photo-num">${label}</div>
+          <div class="check-mark">✓</div>
+          <button class="zoom-btn" onclick="openZoom(event, '${basePath}photos/${file}')">🔍</button>
+        `;
+
+        card.onclick = () => togglePhoto(file);
+        gridEl.appendChild(card);
+      });
+    }
+
+    function togglePhoto(file) {
+      const slot = config.slots.find(s => s.id === activeSlotId);
+      const list = selections[activeSlotId];
+      const idx = list.indexOf(file);
+
+      if (idx > -1) {
+        list.splice(idx, 1);
+      } else {
+        if (list.length >= slot.max) {
+          alert(`В разделе «${slot.name}» можно выбрать максимум ${slot.max} фото.`);
+          return;
+        }
+        list.push(file);
+      }
+      renderTabs();
+      renderGrid();
+      validate();
+    }
+
+    function openZoom(e, src) {
+      e.stopPropagation();
+      document.getElementById('zoomImg').src = src;
+      document.getElementById('zoomModal').classList.add('open');
+    }
+
+    function getStudentName() {
+      const val = document.getElementById('studentSelect').value;
+      if (val === '__custom__') return document.getElementById('customName').value.trim();
+      return val;
+    }
+
+    function validate() {
+      const name = getStudentName();
+      const slotsOk = config.slots.every(s => {
+        const len = selections[s.id].length;
+        return len >= s.min && len <= s.max;
+      });
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = !(name.length > 2 && slotsOk);
+      btn.textContent = btn.disabled ? 'Заполните ФИО и обязательные разделы' : 'Подтвердить выбор и скачать фото';
+    }
+
+    document.getElementById('submitBtn').onclick = async () => {
+      const name = getStudentName();
+      let msg = `📸 *Новый выбор в виньетку*\n*Класс:* ${config.title}\n*Ученик:* ${name}\n\n`;
+      config.slots.forEach(s => {
+        const files = selections[s.id].length ? selections[s.id].join(', ') : 'не выбрано';
+        msg += `• *${s.name}:* ${files}\n`;
+      });
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.textContent = 'Отправка...';
+
+      try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown' })
+        });
+        document.getElementById('successModal').classList.add('open');
+      } catch (err) {
+        alert('Ошибка сети при отправке. Проверьте интернет.');
+        btn.disabled = false;
+      }
+    };
+
+    init();
+  </script>
+</body>
+</html>
